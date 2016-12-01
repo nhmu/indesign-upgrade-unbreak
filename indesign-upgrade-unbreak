@@ -1,0 +1,97 @@
+#!/bin/sh
+
+cat << EOF
+InDesign CC 2014/2015 InCopy plugin symlink error fixer, version 0.3
+
+This program fixes broken symlinks to prevent DF015 unable-to-delete-symlink
+errors for InCopy plugins when upgrading InDesign CC 2014. This program should
+be run BEFORE attempting an upgrade, as the installer will not roll back
+correctly after a failed upgrade. (This last problem seems to be fixed with
+recent releases.)
+
+This program is in the public domain and comes with NO WARRANTY, EXPRESS OR
+IMPLIED.
+
+EOF
+
+# echo Might be related to Adobe case 0186231260
+
+do_fix() {
+  if [ x"$1" = x ]; then
+    echo Usage: do_fix /path/to/application_directory
+     return 1
+  fi
+
+  ID_PATH=$1
+
+  if ! ([ -d "$ID_PATH" ] && (
+    [ -d "${ID_PATH}/Adobe InDesign CC 2014.app" ] ||
+    [ -d "${ID_PATH}/Adobe InDesign CC 2015.app" ] ||
+    [ -d "${ID_PATH}/Adobe InCopy CC 2015.app" ]
+    )); then
+    echo "InDesign isn't at ${ID_PATH}"
+    echo "Find InDesign and run ${0} [path to your InDesign installation]"
+    return 1
+  else
+
+    if ! [ -d "${ID_PATH}/Plug-Ins/InCopyWorkflow" ]; then
+      echo 'No InCopy workflow directory found!'
+      echo 'You probably need to remove & reinstall InDesign'
+      return 2
+    fi
+
+    echo "Working on $ID_PATH"
+
+
+    for i in "${ID_PATH}/Plug-Ins/InCopyWorkflow/"*.InDesignPlugin "${ID_PATH}/Plug-Ins/UI/"*.InDesignPlugin; do
+      pname=`basename "$i" .InDesignPlugin`
+      echo "Checking ${pname}..."
+      if ! [ -d "${i}/Versions/A" ]; then
+        echo "Don't know what to do with this plug-in"
+        continue
+      fi
+      if [ -d "${i}/Versions/B" ]; then
+        echo "Found another plugin version installed!"
+        echo "Never seen this before, ignoring it. Hope nothing breaks."
+        continue
+      fi
+
+      if ! [ -h "${i}/${pname}" ]; then
+        rm -f "${i}/${pname}"
+        ln -s "Versions/Current/${pname}" "${i}/${pname}"
+        echo Fixed plugin binary symlink
+      fi
+
+      if ! [ -h "${i}/Versions/Current" ]; then
+        rm -rf "${i}/Versions/Current"
+        ln -s A "${i}/Versions/Current"
+        echo Fixed Current symlink
+      fi
+
+      if ! [ -h "${i}/Resources" ]; then
+        rm -rf "${i}/Resources"
+        ln -s Versions/Current/Resources "${i}/Resources"
+        echo Fixed Resources symlink
+      fi
+
+    done
+
+  fi
+}
+
+
+if [ -n "$1" ]; then
+  MANUAL_PATH="$1"
+fi
+
+if [ x"MANUAL_PATH" = x ]; then
+  do_fix "$MANUAL_PATH"
+else
+  for i in '/Applications/Adobe InCopy CC 2015' '/Applications/Adobe InDesign CC 2015' '/Applications/Adobe InDesign CC 2014'; do
+    if [ -d "$i" ]; then
+      do_fix "$i"
+    fi
+  done
+fi
+
+
