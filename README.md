@@ -19,8 +19,7 @@ sometimes re-break it, so it's important to run this tool before every
 RemoteUpdateManager run.
 
 We opened a case with Adobe after we hit this with CC2014, but as of CC2015 it
-has not been fixed. We haven't yet deployed CC2017, so I don't know if it also
-suffers from this problem.
+has not been fixed. CC2017 does not appear to suffer from this problem.
 
 ## History of this tool
 
